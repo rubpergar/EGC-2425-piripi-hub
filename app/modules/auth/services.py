@@ -8,12 +8,15 @@ from app.modules.profile.models import UserProfile
 from app.modules.profile.repositories import UserProfileRepository
 from core.configuration.configuration import uploads_folder_name
 from core.services.BaseService import BaseService
-
+from app import db
+from app.modules.auth.models import User
 
 class AuthenticationService(BaseService):
     def __init__(self):
         super().__init__(UserRepository())
         self.user_profile_repository = UserProfileRepository()
+        self.db_session = db.session 
+
 
     def login(self, email, password, remember=True):
         user = self.repository.get_by_email(email)
@@ -79,3 +82,7 @@ class AuthenticationService(BaseService):
 
     def temp_folder_by_user(self, user: User) -> str:
         return os.path.join(uploads_folder_name(), "temp", str(user.id))
+
+    def get_user_by_email(self, email):
+        user = self.db_session.query(User).filter_by(email=email).first()
+        return user
