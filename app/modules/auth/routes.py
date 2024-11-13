@@ -5,6 +5,9 @@ from app.modules.auth import auth_bp
 from app.modules.auth.forms import SignupForm, LoginForm
 from app.modules.auth.services import AuthenticationService
 from app.modules.profile.services import UserProfileService
+from app.modules.auth.forms import ForgotPasswordForm
+from app.modules.auth.services import AuthenticationService
+
 
 
 authentication_service = AuthenticationService()
@@ -53,3 +56,30 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('public.index'))
+
+@auth_bp.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    form = ForgotPasswordForm()
+    if form.validate_on_submit():
+        email = form.email.data
+        user = authentication_service.get_user_by_email(email)
+        if user:
+            token = authentication_service.generate_reset_token(user)
+            send_reset_email(user.email, token)
+        return render_template("auth/forgot_password.html", form=form, message="Check your email for password reset link.")
+    return render_template("auth/forgot_password.html", form=form)
+
+@auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    try:
+        user = authentication_service.verify_reset_token(token)
+    except:
+        return redirect(url_for('auth.forgot_password'))
+    
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        new_password = form.password.data
+        authentication_service.update_password(user, new_password)
+        return redirect(url_for('auth.login'))
+    
+    return render_template("auth/reset_password.html", form=form)
